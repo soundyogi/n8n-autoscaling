@@ -1,18 +1,86 @@
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_main:
+  n8n_webhook:
+
+networks:
+  n8n-network:
+    driver: bridge
+
+x-n8n: &service-n8n
+  build:
+    context: .
+    dockerfile: Dockerfile
+  user: root:root
+  restart: unless-stopped
+  environment:
+    - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED}
+    - N8N_USER_FOLDER=${N8N_USER_FOLDER}
+    - N8N_PORT=${N8N_PORT}
+    - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+    - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS}
+    - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY} # You need to create your own encryption key
+    # Queue mode config
+    - EXECUTIONS_MODE=${EXECUTIONS_MODE}
+    - QUEUE_BULL_REDIS_HOST=${QUEUE_BULL_REDIS_HOST}
+    - QUEUE_HEALTH_CHECK_ACTIVE=${QUEUE_HEALTH_CHECK_ACTIVE}
+    # DB config
+    - DB_TYPE=${DB_TYPE}
+    - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
+    - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+    - DB_POSTGRESDB_USER=${POSTGRES_USER}
+    - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+    # Task Runner config
+    - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=${OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS}
+    - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
+    - N8N_TASK_BROKER_URL=${N8N_TASK_BROKER_URL}
+    - N8N_COMMAND_RESPONSE_URL=${N8N_COMMAND_RESPONSE_URL}
+    - N8N_TASK_BROKER_PORT=${N8N_TASK_BROKER_PORT}
+    - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
+    - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    networks:
+      - n8n-network
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+
+  traefik:
+    image: traefik:v2.10
+    restart: unless-stopped
+    networks:
+      - n8n-network
+    command:
+      - "--api=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.n8n_ui.address=:8082"
+      - "--entrypoints.n8n_webhooks.address=:8083"
+    ports:
+      - "8082:8082"
+      - "8083:8083"
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-      - 6379:6379  
+      - 6379:6379
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: ["CMD", "redis-cli", "ping"]
       interval: 1s
       timeout: 3s
     volumes:
       - redis_data:/data
     networks:
       - n8n-network
-#     - shark     
 
   postgres:
     image: postgres:17
@@ -27,48 +95,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
       timeout: 5s
       retries: 10
     networks:
       - n8n-network
-#     - shark
 
   n8n:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    user: root:root
-    restart: unless-stopped
+    <<: *service-n8n
     ports:
       - "5678:5678"
-      - "5679:5679"  
-    environment:
-      - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED}
-      - N8N_USER_FOLDER=${N8N_USER_FOLDER}
-      - N8N_PORT=${N8N_PORT}
-      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=${N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS}
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}  # You need to create your own encryption key
-      # Queue mode config
-      - EXECUTIONS_MODE=${EXECUTIONS_MODE}
-      - QUEUE_BULL_REDIS_HOST=${QUEUE_BULL_REDIS_HOST}
-      - QUEUE_HEALTH_CHECK_ACTIVE=${QUEUE_HEALTH_CHECK_ACTIVE}
-      # DB config
-      - DB_TYPE=${DB_TYPE}
-      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      # Task Runner config
-      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=${OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS}
-      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
-      - N8N_TASK_BROKER_URL=${N8N_TASK_BROKER_URL}
-      - N8N_COMMAND_RESPONSE_URL=${N8N_COMMAND_RESPONSE_URL}
-      - N8N_TASK_BROKER_PORT=${N8N_TASK_BROKER_PORT}
-      - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - "5679:5679"
     volumes:
       - n8n_main:/n8n
     depends_on:
@@ -78,41 +116,23 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-#     - shark
     healthcheck:
-      test: ['CMD', 'node', '-v']
+      test: ["CMD", "node", "-v"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 60s
-      
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n-ui.rule=Host(`${N8N_HOST}`)"
+      - "traefik.http.routers.n8n-ui.entrypoints=n8n_ui"
+      - "traefik.http.routers.n8n-webhooks.rule=Host(`${N8N_WEBHOOK}`)"
+      - "traefik.http.routers.n8n-webhooks.entrypoints=n8n_webhooks"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
   n8n-webhook:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    user: root:root
-    restart: unless-stopped
+    <<: *service-n8n
     command: sh /webhook
-    environment:
-      - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED}
-      - N8N_USER_FOLDER=${N8N_USER_FOLDER}
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}  # You need to create your own encryption key
-      - N8N_PORT=${N8N_PORT}
-      # Queue mode config
-      - EXECUTIONS_MODE=${EXECUTIONS_MODE}
-      - QUEUE_BULL_REDIS_HOST=${QUEUE_BULL_REDIS_HOST}
-      - QUEUE_HEALTH_CHECK_ACTIVE=${QUEUE_HEALTH_CHECK_ACTIVE}
-      # DB config
-      - DB_TYPE=${DB_TYPE}
-      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      # Task Runner config
-      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=${OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS}
-      - N8N_TASK_BROKER_URL=${N8N_TASK_BROKER_URL}
-      - N8N_COMMAND_RESPONSE_URL=${N8N_COMMAND_RESPONSE_URL}
-      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
     volumes:
       - n8n_webhook:/n8n
     depends_on:
@@ -124,41 +144,11 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-#     - shark
 
   n8n-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    user: root:root
-    restart: unless-stopped
+    <<: *service-n8n
     stop_grace_period: 5m
     command: sh /worker
-    environment:
-      - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED}
-      - N8N_USER_FOLDER=${N8N_USER_FOLDER} # Consider parameterizing this if scaling multiple unique workers
-      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}  # You need to create your own encryption key
-      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=true
-      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
-      - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
-      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-      # Queue mode config
-      - EXECUTIONS_MODE=${EXECUTIONS_MODE}
-      - QUEUE_BULL_REDIS_HOST=${QUEUE_BULL_REDIS_HOST}
-      - QUEUE_HEALTH_CHECK_ACTIVE=${QUEUE_HEALTH_CHECK_ACTIVE}
-      - N8N_CONCURRENCY_PRODUCTION_LIMIT=10
-      - N8N_QUEUE_BULL_GRACEFULSHUTDOWNTIMEOUT=300
-      - N8N_GRACEFUL_SHUTDOWN_TIMEOUT=300
-      # DB config
-      - DB_TYPE=${DB_TYPE}
-      - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
-      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
-      - DB_POSTGRESDB_USER=${POSTGRES_USER}
-      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-      # Task Runner config
-      - N8N_RUNNERS_AUTH_TOKEN=${N8N_RUNNERS_AUTH_TOKEN}
-      - N8N_TASK_BROKER_URL=${N8N_TASK_BROKER_URL}
-      - N8N_COMMAND_RESPONSE_URL=${N8N_COMMAND_RESPONSE_URL}
     depends_on:
       n8n:
         condition: service_healthy
@@ -168,9 +158,9 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-#     - shark
+    #     - shark
     healthcheck:
-      test: ['CMD', 'node','-v']
+      test: ["CMD", "node", "-v"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -204,7 +194,6 @@ services:
         - QUEUE_NAME=${QUEUE_NAME}
         - N8N_WORKER_SERVICE_NAME=${N8N_WORKER_SERVICE_NAME}
         - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}
-    env_file: .env
     restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST}
@@ -216,11 +205,11 @@ services:
       - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME} # Crucial: Should match your project name
       - COMPOSE_FILE_PATH=/app/docker-compose.yml # Path to compose file in mounted project
       - MIN_REPLICAS=${MIN_REPLICAS}
-      - MAX_REPLICAS=${MAX_REPLICAS}                 # Adjust as needed
-      - SCALE_UP_QUEUE_THRESHOLD=${SCALE_UP_QUEUE_THRESHOLD}    # Scale up if queue length > 5
-      - SCALE_DOWN_QUEUE_THRESHOLD=${SCALE_DOWN_QUEUE_THRESHOLD}   # Scale down if queue length < 2
-      - POLLING_INTERVAL_SECONDS=${POLLING_INTERVAL_SECONDS}    # Check every 30 seconds
-      - COOLDOWN_PERIOD_SECONDS=${COOLDOWN_PERIOD_SECONDS}    # Wait 3 minutes after a scaling action
+      - MAX_REPLICAS=${MAX_REPLICAS} # Adjust as needed
+      - SCALE_UP_QUEUE_THRESHOLD=${SCALE_UP_QUEUE_THRESHOLD} # Scale up if queue length > 5
+      - SCALE_DOWN_QUEUE_THRESHOLD=${SCALE_DOWN_QUEUE_THRESHOLD} # Scale down if queue length < 2
+      - POLLING_INTERVAL_SECONDS=${POLLING_INTERVAL_SECONDS} # Check every 30 seconds
+      - COOLDOWN_PERIOD_SECONDS=${COOLDOWN_PERIOD_SECONDS} # Wait 3 minutes after a scaling action
       - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
     volumes:
@@ -233,15 +222,3 @@ services:
         condition: service_started # or service_healthy if you have a healthcheck that passes with 0 initial replicas
     networks:
       - n8n-network
-
-volumes:
-  postgres_data:
-  redis_data:
-  n8n_main:
-  n8n_webhook:
-
-networks:
-  n8n-network:
-    driver: bridge
-#  shark:
-#    external: true
