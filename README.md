@@ -1,4 +1,4 @@
-This branch includes cloudflared.
+This branch includes cloudflared. Configure on cloudflare.com and paste your token in the .env file.  
 
 
 # n8n Autoscaling System
@@ -33,17 +33,20 @@ graph TD
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- Docker and Docker Compose.
 - If you are a new user, I recommend either docker desktop or using the docker convenience script for ubuntu.  
+- Set up your cloudflare domain and subdomains.
 
 ## Quick Start
 
 1. Copy or Clone this repository to a folder of your choice
-2. Configure your environment variables in the .env file - defaults are good to go, but set new passwords and tokens.
-3. Run:
+2. Rename .env.example to .env
+3. Configure your environment variables in the .env file - defaults are good to go, but set new passwords and tokens.
+4. Run:
    ```bash
    docker compose up -d
    ```
+
 
 ## Configuration
 
@@ -100,8 +103,10 @@ The system includes:
 - Check queue length manually: `docker-compose exec redis redis-cli LLEN bull:jobs:wait`
 
 Webhook URL example:
-Webhooks use your docker service name not local host, example:
-http://n8n-webhook:5678/webhook/d7e73b77-6cfb-4add-b454-41e4c91461d8
+Webhooks use your cloudflare subdomain name not local host, example:
+http://webhook.domain.com/webhook/d7e73b77-6cfb-4add-b454-41e4c91461d8
+
+
 
 ## License
 
