@@ -74,8 +74,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - 6379:6379
+#    ports:
+#      - 6379:6379
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 1s
@@ -89,12 +89,15 @@ services:
     image: postgres:17
     restart: unless-stopped
     ports:
-      - 5432:5432
+      - "${TAILSCALE_IP}:5432:5432" # Bind to Tailscale IP if set, otherwise all interfaces
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - PGDATA=${PGDATA}
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256 --auth-local=scram-sha-256
+#      - POSTGRES_HOST=0.0.0.0 # Listen on all interfaces inside container
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -163,7 +166,6 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
-    #     - shark
     healthcheck:
       test: ["CMD", "node", "-v"]
       interval: 5s
