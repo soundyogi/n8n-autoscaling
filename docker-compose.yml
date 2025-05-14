@@ -8,6 +8,8 @@ volumes:
 networks:
   n8n-network:
     driver: bridge
+  shark:
+    external: true
 
 x-n8n: &service-n8n
   build:
@@ -15,6 +17,9 @@ x-n8n: &service-n8n
     dockerfile: Dockerfile
   user: root:root
   restart: unless-stopped
+  networks:
+    - n8n-network
+    - shark
   environment:
     - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED}
     - N8N_USER_FOLDER=${N8N_USER_FOLDER}
@@ -107,6 +112,7 @@ services:
       retries: 10
     networks:
       - n8n-network
+      - shark
 
   n8n:
     <<: *service-n8n
@@ -122,6 +128,7 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
+      - shark
     healthcheck:
       test: ["CMD", "node", "-v"]
       interval: 5s
@@ -166,6 +173,7 @@ services:
         condition: service_healthy
     networks:
       - n8n-network
+      - shark
     healthcheck:
       test: ["CMD", "node", "-v"]
       interval: 5s

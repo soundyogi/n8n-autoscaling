@@ -44,9 +44,14 @@ graph TD
 3. Configure your environment variables in the .env file - defaults are good to go, but set new passwords and tokens.
 4. Run:
    ```bash
+   docker network create shark
+   ```
+5. Run:
+   ```bash
    docker compose up -d
    ```
 
+We create the shark external network in step 4 to make it easier to plug in other containers later.  If you don't want to do this, you can comment out the shark network in the docker compose file.  
 
 ## Configuration
 
