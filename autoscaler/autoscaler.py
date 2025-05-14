@@ -108,12 +108,16 @@ def scale_service(service_name, replicas, compose_file, project_name):
         return False
 
     command = [
-        "docker-compose",
+        "docker",
+        "compose",
         "-f", compose_file,
         "--project-name", project_name,
-        "--project-directory", "/app", # Updated project directory
-        "scale",
-        f"{service_name}={replicas}"
+        "--project-directory", "/app",
+        "up",
+        "-d",
+        "--no-deps",
+        "--scale", f"{service_name}={replicas}",
+        service_name
     ]
     logging.info(f"Executing scaling command: {' '.join(command)}")
     try:

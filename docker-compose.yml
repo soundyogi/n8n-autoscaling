@@ -3,6 +3,7 @@ volumes:
   redis_data:
   n8n_main:
   n8n_webhook:
+  traefik_data:
 
 networks:
   n8n-network:
@@ -25,6 +26,8 @@ x-n8n: &service-n8n
     - EXECUTIONS_MODE=${EXECUTIONS_MODE}
     - QUEUE_BULL_REDIS_HOST=${QUEUE_BULL_REDIS_HOST}
     - QUEUE_HEALTH_CHECK_ACTIVE=${QUEUE_HEALTH_CHECK_ACTIVE}
+    - N8N_QUEUE_BULL_GRACEFULSHUTDOWNTIMEOUT=${N8N_QUEUE_BULL_GRACEFULSHUTDOWNTIMEOUT}
+    - N8N_GRACEFUL_SHUTDOWN_TIMEOUT=${N8N_GRACEFUL_SHUTDOWN_TIMEOUT}
     # DB config
     - DB_TYPE=${DB_TYPE}
     - DB_POSTGRESDB_HOST=${POSTGRES_HOST}
@@ -149,6 +152,8 @@ services:
     <<: *service-n8n
     stop_grace_period: 5m
     command: sh /worker
+    volumes:
+      - n8n_main:/n8n
     depends_on:
       n8n:
         condition: service_healthy
@@ -212,6 +217,8 @@ services:
       - COOLDOWN_PERIOD_SECONDS=${COOLDOWN_PERIOD_SECONDS} # Wait 3 minutes after a scaling action
       - NODE_FUNCTION_ALLOW_EXTERNAL=ajv,ajv-formats,puppeteer
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - N8N_QUEUE_BULL_GRACEFULSHUTDOWNTIMEOUT=${N8N_QUEUE_BULL_GRACEFULSHUTDOWNTIMEOUT}
+      - N8N_GRACEFUL_SHUTDOWN_TIMEOUT=${N8N_GRACEFUL_SHUTDOWN_TIMEOUT}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./.env:/app/.env
