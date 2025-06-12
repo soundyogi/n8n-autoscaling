@@ -2,6 +2,7 @@ Now includes cloudflared. Configure on cloudflare.com and paste your token in th
 
 for step by step instructions follow this guide: https://www.reddit.com/r/n8n/comments/1l9mi6k/major_update_to_n8nautoscaling_build_step_by_step/
 
+original version without cloudflared is saved in the branches for those who don't want to use it. 
 
 # n8n Autoscaling System
 
