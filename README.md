@@ -1,3 +1,6 @@
+This branch includes cloudflared. Configure on cloudflare.com and paste your token in the .env file.  
+
+
 # n8n Autoscaling System
 
 NOTE: If you want to use Cloudflared please check the 2nd branch for a more secure installation configuration. https://github.com/conor-is-my-name/n8n-autoscaling/tree/feature/cloudflared
@@ -32,8 +35,9 @@ graph TD
 
 ## Prerequisites
 
-- Docker and Docker Compose
+- Docker and Docker Compose.
 - If you are a new user, I recommend either docker desktop or using the docker convenience script for ubuntu.  
+- Set up your cloudflare domain and subdomains.
 
 ## Quick Start
 
@@ -106,8 +110,10 @@ The system includes:
 - Check queue length manually: `docker-compose exec redis redis-cli LLEN bull:jobs:wait`
 
 Webhook URL example:
-Webhooks use your docker service name not local host, example:
-http://n8n-webhook:5678/webhook/d7e73b77-6cfb-4add-b454-41e4c91461d8
+Webhooks use your cloudflare subdomain name not local host, example:
+http://webhook.domain.com/webhook/d7e73b77-6cfb-4add-b454-41e4c91461d8
+
+
 
 ## License
 
