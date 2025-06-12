@@ -1,9 +1,9 @@
-This branch includes cloudflared. Configure on cloudflare.com and paste your token in the .env file.  
+Now includes cloudflared. Configure on cloudflare.com and paste your token in the .env file.  
+
+for step by step instructions follow this guide: https://www.reddit.com/r/n8n/comments/1l9mi6k/major_update_to_n8nautoscaling_build_step_by_step/
 
 
 # n8n Autoscaling System
-
-NOTE: If you want to use Cloudflared please check the 2nd branch for a more secure installation configuration. https://github.com/conor-is-my-name/n8n-autoscaling/tree/feature/cloudflared
 
 A Docker-based autoscaling solution for n8n workflow automation platform. Dynamically scales worker containers based on Redis queue length.  No need to deal with k8s or any other container scaling provider, a simple script runs it all and is easily configurable.
 
