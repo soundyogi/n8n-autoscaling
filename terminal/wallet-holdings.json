@@ -1,0 +1,30 @@
+{
+  "wallets": {
+    "0x742d35Cc6634C0532925a3b844Bc9e7595f7F1a2": {
+      "holdings": 15000,
+      "tier": 1,
+      "lastUpdated": "2025-01-27T10:00:00Z"
+    },
+    "0x5aAeb6053F3e94c0b9A09F0C45B5c7a4F91e4f70": {
+      "holdings": 5000,
+      "tier": 2,
+      "lastUpdated": "2025-01-27T10:00:00Z"
+    },
+    "0x8B3fFd5F8c8e7552c550D4A8C5FD3a1F3C9e4b91": {
+      "holdings": 500,
+      "tier": 3,
+      "lastUpdated": "2025-01-27T10:00:00Z"
+    },
+    "0x2F9cDe8c1F5e9D45f8D5b2D2F5E8a9D3F8E2c7B1": {
+      "holdings": 50,
+      "tier": 4,
+      "lastUpdated": "2025-01-27T10:00:00Z"
+    }
+  },
+  "tierThresholds": {
+    "tier1": 10000,
+    "tier2": 1000,
+    "tier3": 100,
+    "tier4": 0
+  }
+}

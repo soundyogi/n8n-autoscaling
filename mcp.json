@@ -1,0 +1,16 @@
+{
+    "servers": {
+        "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "args": [
+                "-y",
+                "@upstash/context7-mcp"
+            ]
+        },
+        "gitmcp": {
+            "type": "sse",
+            "url": "https://gitmcp.io/n8n-io/n8n"
+        }
+    },
+}

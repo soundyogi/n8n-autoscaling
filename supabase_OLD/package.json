@@ -1,0 +1,31 @@
+{
+  "name": "simple-rag-system",
+  "version": "1.0.0",
+  "description": "Simple Supabase RAG system with vector storage and similarity search",
+  "main": "src/index.ts",
+  "scripts": {
+    "setup": "bun run src/scripts/setup.ts",
+    "manage": "bun run src/scripts/manage.ts",
+    "cleanup": "bun run src/scripts/cleanup.ts",
+    "test-search": "bun run -e \"import {ragClient} from './src/tools/rag-client.ts'; console.log(await ragClient.search('test query'))\"",
+    "dev": "bun --watch src/index.ts",
+    "build": "bun build src/index.ts --outdir=dist"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "@types/tape": "^5.8.1",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "tape": "^5.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.0"
+  },
+  "keywords": ["rag", "supabase", "vector", "embeddings", "ai"],
+  "author": "Your Team",
+  "license": "MIT"
+}

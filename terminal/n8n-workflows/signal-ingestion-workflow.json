@@ -1,0 +1,116 @@
+{
+  "name": "Signal Ingestion and Distribution",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "signal-webhook",
+        "responseMode": "onReceived",
+        "responseData": "{ \"status\": \"received\" }",
+        "options": {}
+      },
+      "id": "webhook-receiver",
+      "name": "Signal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "signals",
+        "columns": "content,signal_type,severity,created_at,tier1_release_at,tier2_release_at,tier3_release_at,tier4_release_at",
+        "additionalFields": {}
+      },
+      "id": "insert-signal",
+      "name": "Insert Signal to Supabase",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "minutes"
+      },
+      "id": "wait-tier4",
+      "name": "Wait for Tier 4 Release",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "text": "={{ $json.content.title }}\\n\\n{{ $json.content.description }}\\n\\n#TradingSignal #Crypto"
+      },
+      "id": "post-twitter",
+      "name": "Post to Twitter",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "2",
+          "name": "Twitter OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "signals",
+        "columns": "is_public,twitter_posted,twitter_post_id",
+        "updateKey": "id",
+        "additionalFields": {}
+      },
+      "id": "update-signal-status",
+      "name": "Update Signal Status",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const signalData = $input.first().json;\n\n// Calculate release times\nconst now = new Date();\nconst tier1Release = now.toISOString();\nconst tier2Release = new Date(now.getTime() + 5 * 60 * 1000).toISOString();\nconst tier3Release = new Date(now.getTime() + 15 * 60 * 1000).toISOString();\nconst tier4Release = new Date(now.getTime() + 30 * 60 * 1000).toISOString();\n\nreturn [\n  {\n    json: {\n      content: signalData,\n      signal_type: signalData.type || 'general',\n      severity: signalData.severity || 'medium',\n      created_at: now.toISOString(),\n      tier1_release_at: tier1Release,\n      tier2_release_at: tier2Release,\n      tier3_release_at: tier3Release,\n      tier4_release_at: tier4Release,\n      is_public: false,\n      twitter_posted: false\n    }\n  }\n];"
+      },
+      "id": "prepare-signal-data",
+      "name": "Prepare Signal Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [350, 300]
+    }
+  ],
+  "connections": {
+    "webhook-receiver": {
+      "main": [[{"node": "prepare-signal-data", "type": "main", "index": 0}]]
+    },
+    "prepare-signal-data": {
+      "main": [[{"node": "insert-signal", "type": "main", "index": 0}]]
+    },
+    "insert-signal": {
+      "main": [[{"node": "wait-tier4", "type": "main", "index": 0}]]
+    },
+    "wait-tier4": {
+      "main": [[{"node": "post-twitter", "type": "main", "index": 0}]]
+    },
+    "post-twitter": {
+      "main": [[{"node": "update-signal-status", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1"
+}

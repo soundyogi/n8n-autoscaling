@@ -1,0 +1,31 @@
+{
+  "name": "squad-openai-translator",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run index.ts",
+    "dev": "bun --watch index.ts",
+    "devmodern": "bun --watch index-modern.ts",
+    "test": "bun run run-tests.ts",
+    "test:health": "bun run tests/health.test.ts",
+    "test:models": "bun run tests/models.test.ts",
+    "test:chat": "bun run tests/chat-completions.test.ts",
+    "test:streaming": "bun run tests/streaming.test.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/supertest": "^6.0.3",
+    "@types/tape": "^5.8.1",
+    "supertest": "^7.1.0",
+    "tape": "^5.9.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
+}
